@@ -237,7 +237,9 @@ private:
         it = key_map.insert ({key, iterator});
         reverse_key_map.insert ({&(iterator->second), it});
     }
+
 public:
+
         template <std::size_t I>
         class
     const_by_key_iterator
@@ -299,9 +301,35 @@ public:
             return a.it_m != b.it_m;
         }
     private:
-                const_key_iterator_t <key_t> 
-            it_m;
+            const_key_iterator_t <key_t> 
+        it_m;
     };
+
+        template <std::size_t I>
+        auto
+    key_begin () const
+        -> const_by_key_iterator <I>
+    {
+        return std::get <I> (keys_m).begin ();
+    }
+
+        template <std::size_t I>
+        auto
+    key_end () const
+        -> const_by_key_iterator <I>
+    {
+        return std::get <I> (keys_m).end ();
+    }
+
+        template <
+              std::size_t I
+            , class Key = std::tuple_element_t <I, key_tuple_t>
+        >
+        bool
+    contains (Key const& key) const
+    {
+        return std::get <I> (keys_m).contains (key);
+    }
 
         template <
               std::size_t I
@@ -312,6 +340,7 @@ public:
     {
         return std::get <I> (keys_m).equal_range (key);
     }
+
     /** Retrieve values by keys intersections.
      * This is std::set_intersection with the propper indirections.
      */
