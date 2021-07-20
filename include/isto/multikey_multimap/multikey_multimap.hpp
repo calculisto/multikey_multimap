@@ -37,6 +37,7 @@ detail
         ((static_for_impl_2 <Is> (function, (std::forward <Tuples> (tuples))...)), ...);
     }
 } // namespace detail
+
     template <
           class Function
         , class FirstTuple
@@ -60,6 +61,58 @@ static_for (
     );
     
 }
+
+    namespace
+detail
+{
+    // Head & tail
+        template <class Tuple>
+        using
+    head_t = std::tuple_element_t <0, Tuple>;
+
+        template <class Tuple>
+        constexpr auto
+    head (Tuple&& tuple)
+    {
+        return std::get <0> (std::forward <Tuple> (tuple));
+    }
+
+        namespace
+    detail
+    {
+            constexpr auto
+        one = std::size_t { 1 };
+
+            template <class Tuple, std::size_t ...Is>
+            constexpr auto
+        tail_impl_t (std::index_sequence <Is...>)
+            -> std::tuple <std::tuple_element_t <Is + one, Tuple>...>
+        ;
+
+            template <class Tuple, std::size_t ...Is>
+            constexpr auto
+        tail_impl (Tuple&& tuple, std::index_sequence <Is...>)
+        {
+            return std::tuple { std::get<Is + one> (std::forward <Tuple> (tuple))... };
+        }
+    } // namespace detail
+
+        template <class Tuple>
+        using
+    tail_t = decltype (detail::tail_impl_t <Tuple> (
+            std::make_index_sequence <std::tuple_size_v <std::remove_cvref_t <Tuple>> - detail::one> {}
+    ));
+
+        template <class Tuple>
+        constexpr auto
+    tail (Tuple&& tuple)
+    {
+        return detail::tail_impl <Tuple> (
+              std::forward <Tuple> (tuple)
+            , std::make_index_sequence <std::tuple_size_v <std::remove_cvref_t <Tuple>> - detail::one> {}
+        );
+    }
+} // namespace detail
 
     template <class T, class... Keys>
     class
@@ -173,6 +226,15 @@ public:
     {
         return values_container_m.find (key);
     }
+
+    multikey_multimap_t (std::initializer_list <value_type> list)
+    {
+        for (auto&& e: list)
+        {
+            insert (std::move (e));
+        }
+    }
+    multikey_multimap_t () = default;
 private:
     /** Keys container, i.e. keys -> value mappings.
      * It's a tuple of multimaps from keys to iterators of the values container.
@@ -370,13 +432,108 @@ public:
         }
         return d_first;
     }
-    multikey_multimap_t (std::initializer_list <value_type> list)
-    {
-        for (auto&& e: list)
-        {
-            insert (std::move (e));
-        }
+private:
+    // Here, we implement this:
+    // https://stackoverflow.com/a/25509185
+
+        template <class Tuple>
+        using
+    tuple_indices_t = std::make_index_sequence <std::tuple_size_v <
+        std::remove_cvref_t <Tuple>
+    >>;
+
+        template <
+              class Tuple
+            , std::size_t ...Is
+        >
+        constexpr auto
+    all_same_impl (
+          Tuple&& tuple
+        , std::index_sequence <Is...>
+    ){
+        return ((std::get <0> (tuple)->second == std::get <Is> (tuple)->second) && ...);
     }
-    multikey_multimap_t () = default;
+
+        template <
+              class Tuple
+            , std::size_t ...Is
+        >
+        constexpr auto
+    advance_all_impl (
+          Tuple&& tuple
+        , std::index_sequence <Is...>
+    ){
+        return std::tuple { ++(std::get <Is> (tuple))... };
+    }
+
+        template <class U, class V>
+        constexpr auto
+    max_impl (std::tuple <U, V> const& t)
+    {
+        return std::max (std::get <0> (t)->second, std::get <1> (t)->second);
+    }
+
+        template <class ... Ts>
+        constexpr auto
+    max_impl (std::tuple <Ts...> const& tuple)
+    {
+        return std::max (std::get <0> (tuple)->second, max_impl (detail::tail (tuple)));
+    }
+
+        template <
+              class Tuple
+            , class U
+            , std::size_t ...Is
+        >
+        constexpr auto
+    conditionnaly_increment_impl (
+          Tuple& tuple
+        , U max
+        , std::index_sequence <Is...>
+    ){
+        static_for ([&](auto& x){ if (x->second < max) return ++x; return x; }, tuple);
+        return tuple;
+    }
+
+        template <
+              class Tuple
+            , std::size_t ...Is
+        >
+        constexpr auto
+    advance_all_but_highest_impl (
+          Tuple&& tuple
+        , std::index_sequence <Is...> is
+    ){
+            auto const
+        max = max_impl (std::forward <Tuple> (tuple));
+        return conditionnaly_increment_impl (std::forward <Tuple> (tuple), max, is);
+    }
+public:
+        template <
+              class Tuple
+            , class OutputIterator
+        >
+        OutputIterator
+    intersection (
+          Tuple&& first
+        , Tuple&& last
+        , OutputIterator d_first
+    ){
+        // TODO assert size > 1
+        // TODO assert first.size () == last.size ()
+        while (first != last)
+        {
+            if (all_same_impl (first, tuple_indices_t <Tuple> {}))
+            {
+                *d_first++ = *(std::get <0> (first));
+                first = advance_all_impl (first, tuple_indices_t <Tuple> {});
+            }
+            else
+            {
+                first = advance_all_but_highest_impl (first, tuple_indices_t <Tuple> {});
+            }
+        }
+        return d_first;
+    }
 };
 } // namespace isto::multikey_multimap
