@@ -330,12 +330,26 @@ public:
             ++it_m;
             return *this;
         }
+            const_by_key_iterator&
+        operator -- ()
+        {
+            --it_m;
+            return *this;
+        }
             const_by_key_iterator
         operator ++ (int)
         {
                 auto
             copy { *this };
             operator ++ ();
+            return copy;
+        }
+            const_by_key_iterator
+        operator -- (int)
+        {
+                auto
+            copy { *this };
+            operator -- ();
             return copy;
         }
             value_type const&
@@ -443,27 +457,27 @@ private:
     >>;
 
         template <
-              class Tuple
+              class ...Ts
             , std::size_t ...Is
         >
         constexpr auto
     all_same_impl (
-          Tuple&& tuple
+          std::tuple <Ts...> const& tuple
         , std::index_sequence <Is...>
     ) const {
         return ((std::get <0> (tuple)->second == std::get <Is> (tuple)->second) && ...);
     }
 
         template <
-              class Tuple
+              class ...Ts
             , std::size_t ...Is
         >
         constexpr auto
     advance_all_impl (
-          Tuple&& tuple
+          std::tuple <Ts...> const& tuple
         , std::index_sequence <Is...>
     ) const {
-        return std::tuple { ++(std::get <Is> (tuple))... };
+        return std::tuple { (std::next (std::get <Is> (tuple)))... };
     }
 
         template <class U, class V>
@@ -487,7 +501,7 @@ private:
         >
         constexpr auto
     conditionnaly_increment_impl (
-          Tuple& tuple
+          Tuple tuple
         , U max
         , std::index_sequence <Is...>
     ) const {
@@ -496,41 +510,41 @@ private:
     }
 
         template <
-              class Tuple
+              class ...Ts
             , std::size_t ...Is
         >
         constexpr auto
     advance_all_but_highest_impl (
-          Tuple&& tuple
+          std::tuple <Ts...> const& tuple
         , std::index_sequence <Is...> is
     ) const {
             auto const
-        max = max_impl (std::forward <Tuple> (tuple));
-        return conditionnaly_increment_impl (std::forward <Tuple> (tuple), max, is);
+        max = max_impl (tuple);
+        return conditionnaly_increment_impl (tuple, max, is);
     }
 public:
         template <
-              class Tuple
-            , class OutputIterator
+              class OutputIterator
+            , class ...Ts
         >
         OutputIterator
     intersection (
-          Tuple&& first
-        , Tuple&& last
+          std::tuple <Ts...> first
+        , std::tuple <Ts...> const& last
         , OutputIterator d_first
     ) const {
         // TODO assert size > 1
         // TODO assert first.size () == last.size ()
         while (first != last)
         {
-            if (all_same_impl (first, tuple_indices_t <Tuple> {}))
+            if (all_same_impl (first, std::index_sequence_for <Ts...> {}))
             {
                 *d_first++ = *(std::get <0> (first));
-                first = advance_all_impl (first, tuple_indices_t <Tuple> {});
+                first = advance_all_impl (first, std::index_sequence_for <Ts...> {});
             }
             else
             {
-                first = advance_all_but_highest_impl (first, tuple_indices_t <Tuple> {});
+                first = advance_all_but_highest_impl (first, std::index_sequence_for <Ts...> {});
             }
         }
         return d_first;
