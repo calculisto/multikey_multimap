@@ -418,7 +418,7 @@ public:
         , const_by_key_iterator <I2> first2
         , const_by_key_iterator <I2> last2
         , OutputIterator d_first
-    ){
+    ) const {
         while (first1 != last1 && first2 != last2) {
             if (first1->second < first2->second) {
                 ++first1;
@@ -450,7 +450,7 @@ private:
     all_same_impl (
           Tuple&& tuple
         , std::index_sequence <Is...>
-    ){
+    ) const {
         return ((std::get <0> (tuple)->second == std::get <Is> (tuple)->second) && ...);
     }
 
@@ -462,20 +462,20 @@ private:
     advance_all_impl (
           Tuple&& tuple
         , std::index_sequence <Is...>
-    ){
+    ) const {
         return std::tuple { ++(std::get <Is> (tuple))... };
     }
 
         template <class U, class V>
         constexpr auto
-    max_impl (std::tuple <U, V> const& t)
+    max_impl (std::tuple <U, V> const& t) const
     {
         return std::max (std::get <0> (t)->second, std::get <1> (t)->second);
     }
 
         template <class ... Ts>
         constexpr auto
-    max_impl (std::tuple <Ts...> const& tuple)
+    max_impl (std::tuple <Ts...> const& tuple) const
     {
         return std::max (std::get <0> (tuple)->second, max_impl (detail::tail (tuple)));
     }
@@ -490,7 +490,7 @@ private:
           Tuple& tuple
         , U max
         , std::index_sequence <Is...>
-    ){
+    ) const {
         static_for ([&](auto& x){ if (x->second < max) return ++x; return x; }, tuple);
         return tuple;
     }
@@ -503,7 +503,7 @@ private:
     advance_all_but_highest_impl (
           Tuple&& tuple
         , std::index_sequence <Is...> is
-    ){
+    ) const {
             auto const
         max = max_impl (std::forward <Tuple> (tuple));
         return conditionnaly_increment_impl (std::forward <Tuple> (tuple), max, is);
@@ -518,7 +518,7 @@ public:
           Tuple&& first
         , Tuple&& last
         , OutputIterator d_first
-    ){
+    ) const {
         // TODO assert size > 1
         // TODO assert first.size () == last.size ()
         while (first != last)
