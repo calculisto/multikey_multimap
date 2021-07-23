@@ -376,6 +376,10 @@ public:
         ){
             return a.it_m != b.it_m;
         }
+        operator const_iterator () const
+        {
+            return it_m->second;
+        }
     private:
             const_key_iterator_t <key_t> 
         it_m;
@@ -420,131 +424,47 @@ public:
     /** Retrieve values by keys intersections.
      * This is std::set_intersection with the propper indirections.
      */
+private:
+        template <class Iterator>
+        auto
+    get_impl (Iterator const& i) const
+    {
+        return (*i);
+    }
+        template <std::size_t I>
+        auto
+    get_impl (const_by_key_iterator <I> i) const
+    {
+        return i;
+    }
+public:
         template <
-              std::size_t I1
-            , std::size_t I2
+              class Iterator1
+            , class Iterator2
             , class OutputIterator
         >
         OutputIterator
     intersection (
-          const_by_key_iterator <I1> first1
-        , const_by_key_iterator <I1> last1
-        , const_by_key_iterator <I2> first2
-        , const_by_key_iterator <I2> last2
+          Iterator1 first1
+        , Iterator1 last1
+        , Iterator2 first2
+        , Iterator2 last2
         , OutputIterator d_first
     ) const {
-        while (first1 != last1 && first2 != last2) {
-            if (first1->second < first2->second) {
+        while (first1 != last1 && first2 != last2) 
+        {
+            if (get_impl(first1)->second < get_impl(first2)->second) 
+            {
                 ++first1;
-            } else  {
-                if (!(first2->second < first1->second)) {
-                    *d_first++ = *first1;
+            } 
+            else  
+            {
+                if (!(get_impl(first2)->second < get_impl(first1)->second)) 
+                {
+                    *d_first++ = get_impl (first1);
                     ++first1;
                 }
                 ++first2;
-            }
-        }
-        return d_first;
-    }
-private:
-    // Here, we implement this:
-    // https://stackoverflow.com/a/25509185
-
-        template <class Tuple>
-        using
-    tuple_indices_t = std::make_index_sequence <std::tuple_size_v <
-        std::remove_cvref_t <Tuple>
-    >>;
-
-        template <
-              class ...Ts
-            , std::size_t ...Is
-        >
-        constexpr auto
-    all_same_impl (
-          std::tuple <Ts...> const& tuple
-        , std::index_sequence <Is...>
-    ) const {
-        return ((std::get <0> (tuple)->second == std::get <Is> (tuple)->second) && ...);
-    }
-
-        template <
-              class ...Ts
-            , std::size_t ...Is
-        >
-        constexpr auto
-    advance_all_impl (
-          std::tuple <Ts...> const& tuple
-        , std::index_sequence <Is...>
-    ) const {
-        return std::tuple { (std::next (std::get <Is> (tuple)))... };
-    }
-
-        template <class U, class V>
-        constexpr auto
-    max_impl (std::tuple <U, V> const& t) const
-    {
-        return std::max (std::get <0> (t)->second, std::get <1> (t)->second);
-    }
-
-        template <class ... Ts>
-        constexpr auto
-    max_impl (std::tuple <Ts...> const& tuple) const
-    {
-        return std::max (std::get <0> (tuple)->second, max_impl (detail::tail (tuple)));
-    }
-
-        template <
-              class Tuple
-            , class U
-            , std::size_t ...Is
-        >
-        constexpr auto
-    conditionnaly_increment_impl (
-          Tuple tuple
-        , U max
-        , std::index_sequence <Is...>
-    ) const {
-        static_for ([&](auto& x){ if (x->second < max) return ++x; return x; }, tuple);
-        return tuple;
-    }
-
-        template <
-              class ...Ts
-            , std::size_t ...Is
-        >
-        constexpr auto
-    advance_all_but_highest_impl (
-          std::tuple <Ts...> const& tuple
-        , std::index_sequence <Is...> is
-    ) const {
-            auto const
-        max = max_impl (tuple);
-        return conditionnaly_increment_impl (tuple, max, is);
-    }
-public:
-        template <
-              class OutputIterator
-            , class ...Ts
-        >
-        OutputIterator
-    intersection (
-          std::tuple <Ts...> first
-        , std::tuple <Ts...> const& last
-        , OutputIterator d_first
-    ) const {
-        // TODO assert size > 1
-        // TODO assert first.size () == last.size ()
-        while (first != last)
-        {
-            if (all_same_impl (first, std::index_sequence_for <Ts...> {}))
-            {
-                *d_first++ = *(std::get <0> (first));
-                first = advance_all_impl (first, std::index_sequence_for <Ts...> {});
-            }
-            else
-            {
-                first = advance_all_but_highest_impl (first, std::index_sequence_for <Ts...> {});
             }
         }
         return d_first;
