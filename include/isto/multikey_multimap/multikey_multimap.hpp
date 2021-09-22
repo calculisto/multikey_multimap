@@ -768,7 +768,7 @@ private:
           OutputIterator d_first
         , std::index_sequence <Is...> = std::index_sequence_for <Keys...> {}
         , std::optional <Keys> const&... opt_keys
-    ){
+    ) const {
         for (auto i = values_container_m.begin (); i != values_container_m.end (); ++i)
         {
             if ((... && (!opt_keys || *opt_keys == std::get <Is> (i->first))))
@@ -786,7 +786,7 @@ public:
     select (
           OutputIterator d_first
         , std::optional <Keys> const&... opt_keys
-    ){
+    ) const {
         return select_impl (
               d_first
             , std::index_sequence_for <Keys...> {}
