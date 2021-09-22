@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <functional>
+#include <optional>
 
     namespace isto::multikey_multimap
 {
@@ -114,6 +115,159 @@ detail
     }
 } // namespace detail
 
+    namespace
+detail 
+{
+    template <class... Ts, std::size_t... Is>
+    constexpr auto
+not_at_end_impl (
+      std::tuple <Ts...> const& first
+    , std::tuple <Ts...> const& last
+    , std::index_sequence <Is...>
+){
+    return (... && (std::get <Is> (first) != std::get <Is> (last)));
+}
+    template <class... Ts>
+    constexpr auto
+not_at_end (
+      std::tuple <Ts...> const& first
+    , std::tuple <Ts...> const& last
+){
+    return not_at_end_impl (first, last, std::index_sequence_for <Ts...> {});
+}
+    template <class... Ts, std::size_t... Is>
+    constexpr auto
+not_at_end_impl (
+      std::tuple <Ts...> const& first
+    , std::tuple <Ts...> const& last
+    , std::tuple <Ts...> const& flag
+    , std::index_sequence <Is...>
+){
+    return (... && (std::get <Is> (flag) && (std::get <Is> (first) != std::get <Is> (last))));
+}
+    template <class... Ts>
+    constexpr auto
+not_at_end (
+      std::tuple <Ts...> const& first
+    , std::tuple <Ts...> const& last
+    , std::tuple <Ts...> const& flag
+){
+    return not_at_end_impl (first, last, std::index_sequence_for <Ts...> {});
+}
+/*
+    template <class T>
+    constexpr auto
+not_at_end (
+      T first_begin
+    , T first_end
+    , T last_begin
+    , T last_end
+){
+        auto const
+    [ a, b ] = std::mismatch (first_begin, first_end, last_begin);
+    return a != first_end;
+}
+*/
+    namespace
+test
+{
+        constexpr auto
+    f1 = std::tuple { 1, 1., 'a' };
+        constexpr auto
+    f2 = std::tuple { 1, 2., 'a' };
+        constexpr auto
+    l = std::tuple { 2, 2., 'b' };
+    static_assert (not_at_end (f1, l));
+    static_assert (!not_at_end (f2, l));
+} // namespace test
+
+    template <class T>
+    constexpr auto
+get_max (std::tuple <T> const& t)
+{
+    return (std::get <0> (t))->second;
+}
+
+    template <class... Ts>
+    constexpr auto
+get_max (std::tuple <Ts...> const& t)
+{
+        using std::max;
+    return max (head (t)->second, get_max (tail (t)));
+}
+    template <class... Ts>
+    constexpr auto
+get_max (
+      std::tuple <Ts...> const& t
+    , std::tuple <Ts...> const& flag
+){
+    /*
+        auto&&
+    [v, rest] = get_first (t, flags);
+
+        using std::max;
+    return max (head (t)->second, get_max (tail (t)));
+    */
+    // TODO
+}
+    namespace 
+test
+{
+        constexpr auto
+    a1 = std::pair { 0, 1 };
+        constexpr auto
+    a2 = std::pair { 0, 3 };
+        constexpr auto
+    a3 = std::pair { 0, 0 };
+    static_assert (get_max (std::tuple { &a1, &a2, &a3 }) == 3);
+} // namespace test
+
+    template <class T, class... Ts>
+    constexpr auto
+advance_if_under (std::tuple <Ts...>& first, T const& max)
+{
+    static_for (
+          [max](auto& x){ if (x->second < max) ++x; }
+        , first
+    );
+}
+    namespace
+test
+{
+    // ?
+} // namespace test
+
+    template <class... Ts>
+    constexpr auto
+all_same (std::tuple <Ts...> const& t)
+{
+        auto const
+    a = std::get <0> (t)->second;
+        auto
+    r = true;
+    static_for (
+          [a,&r](auto const& x){ r  = r && (x->second == a); }
+        , t
+    );
+    return r;
+}
+    namespace
+test
+{
+    static_assert ( all_same (std::tuple { &a1, &a1, &a1 }));
+    static_assert (!all_same (std::tuple { &a1, &a2, &a1 }));
+} // namespace test
+    template <class... Ts>
+    constexpr auto
+advance_all (std::tuple <Ts...>& first)
+{
+    static_for (
+          [](auto& x){ ++x; }
+        , first
+    );
+}
+} // namespace detail
+
     template <class T, class... Keys>
     class
 multikey_multimap_t
@@ -128,7 +282,7 @@ public:
         using
     size_type = std::size_t;
         using
-    difference_type =std::ptrdiff_t;
+    difference_type = std::ptrdiff_t;
     /*
         using
     key_compare = ;
@@ -299,9 +453,7 @@ private:
         it = key_map.insert ({key, iterator});
         reverse_key_map.insert ({&(iterator->second), it});
     }
-
 public:
-
         template <std::size_t I>
         class
     const_by_key_iterator
@@ -380,6 +532,16 @@ public:
         {
             return it_m->second;
         }
+            auto
+        is_begin () const
+        {
+            return it_m == std::get <I> (keys_m).begin ();
+        }
+            auto
+        is_end () const
+        {
+            return it_m == std::get <I> (keys_m).end ();
+        }
     private:
             const_key_iterator_t <key_t> 
         it_m;
@@ -392,7 +554,6 @@ public:
     {
         return std::get <I> (keys_m).begin ();
     }
-
         template <std::size_t I>
         auto
     key_end () const
@@ -400,7 +561,6 @@ public:
     {
         return std::get <I> (keys_m).end ();
     }
-
         template <
               std::size_t I
             , class Key = std::tuple_element_t <I, key_tuple_t>
@@ -410,7 +570,6 @@ public:
     {
         return std::get <I> (keys_m).contains (key);
     }
-
         template <
               std::size_t I
             , class Key = std::tuple_element_t <I, key_tuple_t>
@@ -424,6 +583,7 @@ public:
     /** Retrieve values by keys intersections.
      * This is std::set_intersection with the propper indirections.
      */
+        /*
 private:
         template <class Iterator>
         auto
@@ -468,6 +628,170 @@ public:
             }
         }
         return d_first;
+    }
+    */
+        template <
+              class OutputIterator
+            , class... Iterators
+        >
+        auto
+    intersect (
+          std::tuple <Iterators...> first
+        , std::tuple <Iterators...> last
+        , OutputIterator d_first
+    ){
+        while (detail::not_at_end (first, last))
+        {
+                auto const
+            max = detail::get_max (first);
+            detail::advance_if_under (first, max);
+            if (detail::all_same (first))
+            {
+                *d_first++ = std::get <0> (first);
+                detail::advance_all (first);
+            } 
+        }
+    }
+        template <
+              class OutputIterator
+            , class... Iterators
+        >
+        auto
+    intersect2 (
+          OutputIterator d_first
+        , std::pair <Iterators, Iterators>... pairs
+    ){
+            auto const
+        first = std::tuple { std::get <0> (pairs)... };
+            auto const
+        last = std::tuple { std::get <1> (pairs)... };
+        return intersect (first, last, d_first);
+    }
+
+private:
+    // Build tuple of optional iterators
+        /*
+        template <class OutputIterator, class Tuple, std::size_t... Is>
+        constexpr auto
+    select (
+          OutputIterator d_first
+        , Tuple&& tuple_of_opt_keys
+        , std::index_sequence <Is...>
+    ){
+            auto
+        first = std::tuple {  };
+        static_for ([](auto opt_k, auto i){
+
+              }
+            , std::tuple { opt_keys... }
+            , std::tuple { Is... }
+        );
+    }
+    */
+public:
+        /*
+        template <
+              class OutputIterator
+            , std::size_t... Is
+        >
+        constexpr auto
+    select (
+          OutputIterator d_first
+        , std::optional <Keys> const&... opt_keys
+        , std::index_sequence <Is...> = std::index_sequence_for <Keys...> {}
+    ){
+            auto
+        first = std::tuple { (opt_keys ? equal_range <Is> (*opt_keys).first : key_begin <Is>)... };
+            auto
+        flag = std::tuple { (opt_keys ? true : false)... };
+            auto
+        last = std::tuple { (opt_keys ? equal_range <Is> (*opt_keys).second : key_begin <Is>)... };
+        while (detail::not_at_end (first, last, flag))
+        {
+                auto const
+            max = detail::get_max (first, flag);
+            detail::advance_if_under (first, max, flag);
+            if (detail::all_same (first, flag))
+            {
+                *d_first++ = detail::get (first, flag);
+                detail::advance_all (first, flag);
+            } 
+        }
+    }
+    */
+        /*
+private:
+    // We need a type-erased const_by_key_iterator
+        template <std::size_t... Is>
+        class
+    any_const_by_key_iterator
+    {};
+public:
+        template <std::size_t... Is>
+        class
+    selector_t
+    {
+    public:
+        selector_t (multikey_multimap_t const& map)
+            : map_m { map }
+        {}
+            template <std::size_t I>
+            constexpr auto
+        refine (const_by_key_iterator <I> first, const_by_key_iterator <I> last)
+        {
+        }
+    private:
+            multikey_multimap_t const&
+        map_m;
+    };
+
+        template <std::size_t... Is>
+        constexpr auto
+    make_selector_t (std::index_sequence <Is...>)
+    {
+        return selector_t <Is...> { *this };
+    }
+
+        constexpr auto
+    select_all () const
+    {
+        return make_selector (std::index_sequence_for <Keys...> {});
+    }
+    */
+private:
+        template <
+              class OutputIterator
+            , std::size_t... Is
+        >
+        constexpr auto
+    select_impl (
+          OutputIterator d_first
+        , std::index_sequence <Is...> = std::index_sequence_for <Keys...> {}
+        , std::optional <Keys> const&... opt_keys
+    ){
+        for (auto i = values_container_m.begin (); i != values_container_m.end (); ++i)
+        {
+            if ((... && (!opt_keys || *opt_keys == std::get <Is> (i->first))))
+            {
+                *d_first++ = i;
+            }
+        }
+        return d_first;
+    }
+public:
+        template <
+              class OutputIterator
+        >
+        constexpr auto
+    select (
+          OutputIterator d_first
+        , std::optional <Keys> const&... opt_keys
+    ){
+        return select_impl (
+              d_first
+            , std::index_sequence_for <Keys...> {}
+            , opt_keys...
+        );
     }
 };
 } // namespace isto::multikey_multimap

@@ -18,26 +18,28 @@ TEST_CASE("multikey_multimap.hpp")
     map.insert ({{ 'A', 'Y', 'R' }, 2 });
 
     fmt::print ("The map:\n  v  k1  k2  k3\n  ----------------\n");
-    for (auto const& i: map)
+    for (auto&& [k, v]: map)
     {
         fmt::print (
               "  {:1} {:>2} {:>3} {:>3}\n"
-            , i.second
-            , std::get <0> (i.first)
-            , std::get <1> (i.first)
-            , std::get <2> (i.first)
+            , v
+            , std::get <0> (k)
+            , std::get <1> (k)
+            , std::get <2> (k)
         );
     }
 
     fmt::print ("\nBy key 1: \n");
     for (auto i = map.key_begin <0> (); i != map.key_end <0> (); ++i)
     {
+            auto const
+        [k, v] = *i;
         fmt::print (
               "  {} ({}, {}, {})\n"
-            , i->second
-            , std::get <0> (i->first)
-            , std::get <1> (i->first)
-            , std::get <2> (i->first)
+            , v
+            , std::get <0> (k)
+            , std::get <1> (k)
+            , std::get <2> (k)
         );
     }
     fmt::print ("\nBy key 2: \n");
@@ -102,6 +104,7 @@ TEST_CASE("multikey_multimap.hpp")
             , std::get <2> (c->first)
         );
     }
+    /*
     {
             std::vector <map_t::const_iterator>
         res;
@@ -220,6 +223,251 @@ TEST_CASE("multikey_multimap.hpp")
             );
                 auto
             c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+*/
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect (
+              std::tuple { a0, b0, c0 }
+            , std::tuple { a1, b1, c1 }
+            , std::back_inserter (r)
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect (
+              std::tuple { a0, b0 }
+            , std::tuple { a1, b1 }
+            , std::back_inserter (r)
+        );
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 1);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect (
+              std::tuple { b0, c0 }
+            , std::tuple { b1, c1 }
+            , std::back_inserter (r)
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect (
+              std::tuple { c0 }
+            , std::tuple { c1 }
+            , std::back_inserter (r)
+        );
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 4);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect2 (
+              std::back_inserter (r)
+            , std::pair { a0, a1 }
+            , std::pair { b0, b1 }
+            , std::pair { c0, c1 }
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect2 (
+              std::back_inserter (r)
+            , std::pair { b0, b1 }
+            , std::pair { c0, c1 }
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.intersect2 (
+              std::back_inserter (r)
+            , std::pair { c0, c1 }
+        );
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 4);
+            CHECK(c);
+        }
+    }
+    /*
+    {
+        fmt::print ("\nSelect A, Y, R\n");
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (
+              std::back_inserter (r)
+            , 'A'
+            , 'Y'
+            , 'R'
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+            fmt::print (
+                  "  {} ({}, {}, {})\n"
+                , e->second
+                , std::get <0> (e->first)
+                , std::get <1> (e->first)
+                , std::get <2> (e->first)
+            );
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+        fmt::print ("\nSelect *, Y, R\n");
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (
+              std::back_inserter (r)
+            , {}
+            , 'Y'
+            , 'R'
+        );
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+            fmt::print (
+                  "  {} ({}, {}, {})\n"
+                , e->second
+                , std::get <0> (e->first)
+                , std::get <1> (e->first)
+                , std::get <2> (e->first)
+            );
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+        fmt::print ("\nSelect *, *, R\n");
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (
+              std::back_inserter (r)
+            , {}
+            , {}
+            , 'R'
+        );
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+            fmt::print (
+                  "  {} ({}, {}, {})\n"
+                , e->second
+                , std::get <0> (e->first)
+                , std::get <1> (e->first)
+                , std::get <2> (e->first)
+            );
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 4);
+            CHECK(c);
+        }
+    }
+    */
+    /*
+    {
+            auto
+        r = map.select_all ();
+        r.refine (a0, a1);
+    }
+    */
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (std::back_inserter (r), 'A', 'Y', 'R');
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (std::back_inserter (r), 'A', 'Y', {});
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 1);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (std::back_inserter (r), {}, 'Y', 'R');
+        CHECK(r.size () == 2);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2);
+            CHECK(c);
+        }
+    }
+    {
+            auto
+        r = std::vector <map_t::const_iterator> {};
+        map.select (std::back_inserter (r), {}, {}, 'R');
+        CHECK(r.size () == 3);
+        for (auto&& e: r)
+        {
+                auto
+            c = (e->second == 5) || (e->second == 2) || (e->second == 4);
             CHECK(c);
         }
     }
