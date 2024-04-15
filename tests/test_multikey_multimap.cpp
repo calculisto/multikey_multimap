@@ -1,6 +1,6 @@
 #include <doctest/doctest.h>
-#include "../include/isto/multikey_multimap/multikey_multimap.hpp"
-    using namespace isto::multikey_multimap;
+#include "../include/calculisto/multikey_multimap/multikey_multimap.hpp"
+    using namespace calculisto::multikey_multimap;
 #include <fmt/format.h>
 #include <set>
 

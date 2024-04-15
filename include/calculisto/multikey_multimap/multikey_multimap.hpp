@@ -3,7 +3,7 @@
 #include <functional>
 #include <optional>
 
-    namespace isto::multikey_multimap
+    namespace calculisto::multikey_multimap
 {
     namespace
 detail
@@ -794,4 +794,4 @@ public:
         );
     }
 };
-} // namespace isto::multikey_multimap
+} // namespace calculisto::multikey_multimap
